@@ -1,0 +1,63 @@
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: cdragon
+  labels:
+    name: cdragon
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cdragon-deployment
+  namespace: cdragon
+  labels:
+    app: cdragon
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cdragon
+  template:
+    metadata:
+      labels:
+        app: cdragon
+    spec:
+      nodeSelector:
+        purpose: general
+      containers:
+        - name: cdragon
+          image: agusbrenes/page:latest
+          ports:
+            - containerPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cdragon-service
+  namespace: cdragon
+spec:
+  selector:
+    app: cdragon
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: cdragon
+  namespace: cdragon
+spec:
+  hosts:
+    - "*"
+  gateways:
+    - istio-custom/devops-gateway
+  http:
+    - name: "cdragon-routes"
+      match:
+        - uri:
+            prefix: "/cdragon"
+      route:
+        - destination:
+            host: cdragon-service.cdragon.svc.cluster.local
